@@ -377,8 +377,8 @@ async function main() {
             if (!fieldOfInterest || !fieldOfInterest.trim()) {
                 return reply.status(400).send({ error: "Field of interest is required" });
             }
-            const skills = await studentService.getRequiredSkills(path, fieldOfInterest.trim());
-            return reply.send({ skills });
+            const result = await studentService.getRequiredSkills(path, fieldOfInterest.trim());
+            return reply.send(result);
         } catch (error: any) {
             return reply.status(500).send({ error: error.message || "Failed to load skills" });
         }

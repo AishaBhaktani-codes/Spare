@@ -58,6 +58,8 @@ export default function StudentVerificationPage() {
 
   // ---- Field of interest + skills ----
   const [fieldOfInterest, setFieldOfInterest] = useState("");
+  const [interpretedField, setInterpretedField] = useState<string | null>(null);
+  const [fieldAnalysis, setFieldAnalysis] = useState<string | null>(null);
   const [skills, setSkills] = useState<RequiredSkill[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [ratings, setRatings] = useState<Record<string, number>>({});
@@ -99,6 +101,8 @@ export default function StudentVerificationPage() {
   // Any change to the path or field invalidates skills, ratings and results
   const resetDownstream = () => {
     setSkills([]);
+    setInterpretedField(null);
+    setFieldAnalysis(null);
     setRatings({});
     setAnalysis(null);
   };
@@ -127,11 +131,17 @@ export default function StudentVerificationPage() {
     setSkillsLoading(true);
     setAnalysis(null);
     try {
-      const res = await postJSON<{ skills: RequiredSkill[] }>("/api/student/skills", {
+      const res = await postJSON<{
+        skills: RequiredSkill[];
+        interpretedField?: string;
+        fieldAnalysis?: string;
+      }>("/api/student/skills", {
         path,
         fieldOfInterest: fieldOfInterest.trim(),
       });
-      setSkills(res.skills);
+      setSkills(res.skills || []);
+      setInterpretedField(res.interpretedField || null);
+      setFieldAnalysis(res.fieldAnalysis || null);
       setRatings({});
     } catch (e: any) {
       showError(e.message);
@@ -152,7 +162,7 @@ export default function StudentVerificationPage() {
       const form = new FormData();
       form.append("marksheet", marksheet);
       form.append("pursuitPath", JSON.stringify(path));
-      form.append("fieldOfInterest", fieldOfInterest.trim());
+      form.append("fieldOfInterest", (interpretedField || fieldOfInterest).trim());
       form.append("ratings", JSON.stringify(skills.map((s) => ({ skill: s.skill, rating: ratings[s.skill] }))));
 
       const res = await fetch(`${API_URL}/api/student/analyze`, { method: "POST", body: form });
@@ -285,13 +295,39 @@ export default function StudentVerificationPage() {
           >
             {skillsLoading ? (
               <>
-                <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Generating…
+                <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Checking with Groq AI…
               </>
             ) : (
               "Get skills to rate"
             )}
           </button>
         </div>
+
+        {interpretedField && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl p-4 bg-primary-container/10 border border-primary-container/30 space-y-1.5"
+          >
+            <div className="flex items-center gap-2 text-xs font-bold text-secondary uppercase tracking-wider">
+              <span className="material-symbols-outlined text-sm">auto_awesome</span>
+              Groq AI Verified Discipline
+            </div>
+            <div className="text-base font-semibold text-on-surface flex items-center gap-2 flex-wrap">
+              <span>{interpretedField}</span>
+              {interpretedField.toLowerCase() !== fieldOfInterest.trim().toLowerCase() && (
+                <span className="text-xs text-on-surface-variant font-normal">
+                  (interpreted from &quot;{fieldOfInterest}&quot;)
+                </span>
+              )}
+            </div>
+            {fieldAnalysis && (
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                {fieldAnalysis}
+              </p>
+            )}
+          </motion.div>
+        )}
       </section>
 
       {/* ===== STEP 3: Rate every skill out of 10 ===== */}
@@ -299,7 +335,7 @@ export default function StudentVerificationPage() {
         {skills.length > 0 && (
           <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-container rounded-2xl p-6 space-y-6 border border-outline-variant/20">
             <div className="flex justify-between items-center">
-              <StepTitle num={3} title="Rate your expertise (0–10)" done={allRated} />
+              <StepTitle num={3} title={`Rate your expertise in ${interpretedField || fieldOfInterest} (0–10)`} done={allRated} />
               <span className="text-xs font-mono text-on-surface-variant">
                 {ratedCount}/{skills.length} rated
               </span>
