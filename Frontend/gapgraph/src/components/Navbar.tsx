@@ -19,9 +19,9 @@ export default function Navbar() {
   return (
     <>
       {/* Desktop Nav */}
-      <nav className={`bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 shadow-[0_0_20px_rgba(124,58,237,0.08)] flex justify-between items-center w-full px-6 py-3 ${isLoggedIn ? '' : 'hidden'}`}>
+      <nav className="bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 shadow-[0_0_20px_rgba(124,58,237,0.08)] flex justify-between items-center w-full px-6 py-3">
         <div className="flex items-center gap-4">
-          <Link href="/student-verification" className="flex items-end gap-1 group">
+          <Link href="/" className="flex items-end gap-1 group">
             <div className="flex items-end gap-[2px]">
               <div className="w-1.5 h-3 bg-primary-container rounded-t-sm" />
               <div className="w-1.5 h-5 bg-secondary rounded-t-sm" />
@@ -33,8 +33,9 @@ export default function Navbar() {
             </span>
           </Link>
           <div className="hidden md:flex items-center gap-6 ml-10">
-            {isLoggedIn && navItems.map((item) => {
+            {navItems.map((item) => {
               const isActive =
+                (item.href === "/student-verification" && (pathname === "/student-verification" || pathname === "/")) ||
                 pathname === item.href ||
                 (item.href === "/module/1" && pathname.startsWith("/module"));
               return (
@@ -62,38 +63,71 @@ export default function Navbar() {
               </span>
             </div>
           )}
-          <Link href="/profile" className="w-9 h-9 rounded-full bg-primary-container hover:scale-105 transition-transform flex items-center justify-center text-on-primary-container shadow-[0_0_15px_rgba(124,58,237,0.3)] overflow-hidden">
-            <span className="material-symbols-outlined text-lg">person</span>
-          </Link>
+          {!isLoggedIn ? (
+            <div className="flex items-center gap-3">
+              <Link
+                href="/login"
+                className="hidden sm:inline-flex text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/profile"
+                title="Student Profile"
+                className="w-9 h-9 rounded-full bg-primary-container hover:scale-105 transition-transform flex items-center justify-center text-on-primary-container shadow-[0_0_15px_rgba(124,58,237,0.3)] overflow-hidden"
+              >
+                <span className="material-symbols-outlined text-lg">person</span>
+              </Link>
+            </div>
+          ) : (
+            <Link
+              href="/profile"
+              title="Student Profile"
+              className="w-9 h-9 rounded-full bg-primary-container hover:scale-105 transition-transform flex items-center justify-center text-on-primary-container shadow-[0_0_15px_rgba(124,58,237,0.3)] overflow-hidden"
+            >
+              <span className="material-symbols-outlined text-lg">person</span>
+            </Link>
+          )}
         </div>
       </nav>
 
       {/* Mobile Bottom Nav */}
-      {isLoggedIn && (
-        <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-slate-900/90 backdrop-blur-xl shadow-[0_-4px_24px_rgba(0,0,0,0.4)] rounded-t-xl">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href === "/module/1" && pathname.startsWith("/module"));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-col items-center justify-center p-2 transition-all ${
-                  isActive
-                    ? "text-cyan-400 bg-cyan-400/10 rounded-xl scale-110"
-                    : "text-indigo-400 hover:text-cyan-300"
-                }`}
-              >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                <span className="text-[10px] uppercase tracking-widest mt-1">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+      <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-slate-900/90 backdrop-blur-xl shadow-[0_-4px_24px_rgba(0,0,0,0.4)] rounded-t-xl">
+        {navItems.map((item) => {
+          const isActive =
+            (item.href === "/student-verification" && (pathname === "/student-verification" || pathname === "/")) ||
+            pathname === item.href ||
+            (item.href === "/module/1" && pathname.startsWith("/module"));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center p-2 transition-all ${
+                isActive
+                  ? "text-cyan-400 bg-cyan-400/10 rounded-xl scale-110"
+                  : "text-indigo-400 hover:text-cyan-300"
+              }`}
+            >
+              <span className="material-symbols-outlined">{item.icon}</span>
+              <span className="text-[10px] uppercase tracking-widest mt-1">
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+        <Link
+          href="/profile"
+          className={`flex flex-col items-center justify-center p-2 transition-all ${
+            pathname === "/profile"
+              ? "text-cyan-400 bg-cyan-400/10 rounded-xl scale-110"
+              : "text-indigo-400 hover:text-cyan-300"
+          }`}
+        >
+          <span className="material-symbols-outlined">person</span>
+          <span className="text-[10px] uppercase tracking-widest mt-1">Profile</span>
+        </Link>
+      </nav>
     </>
   );
 }
+

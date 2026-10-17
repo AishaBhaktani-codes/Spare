@@ -1,5 +1,2 @@
-import { redirect } from "next/navigation";
+export { default } from "./student-verification/page";
 
-export default function Home() {
-  redirect("/student-verification");
-}
