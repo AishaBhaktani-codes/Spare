@@ -31,7 +31,7 @@ export default function LoginPage() {
       }
 
       login(data.user);
-      router.push("/upload");
+      router.push("/student-verification");
     } catch (error: any) {
       alert(error.message);
     } finally {

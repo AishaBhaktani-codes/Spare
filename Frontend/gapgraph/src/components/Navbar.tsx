@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useApp } from "@/lib/context";
 
 const navItems = [
-  { label: "Upload", href: "/upload", icon: "cloud_upload" },
+  { label: "Student Verification", href: "/student-verification", icon: "school" },
   { label: "Gap Analysis", href: "/dashboard", icon: "analytics" },
   { label: "Roadmap", href: "/roadmap", icon: "route" },
   { label: "Module", href: "/module/1", icon: "view_module" },
@@ -21,7 +21,7 @@ export default function Navbar() {
       {/* Desktop Nav */}
       <nav className={`bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 shadow-[0_0_20px_rgba(124,58,237,0.08)] flex justify-between items-center w-full px-6 py-3 ${isLoggedIn ? '' : 'hidden'}`}>
         <div className="flex items-center gap-4">
-          <Link href="/upload" className="flex items-end gap-1 group">
+          <Link href="/student-verification" className="flex items-end gap-1 group">
             <div className="flex items-end gap-[2px]">
               <div className="w-1.5 h-3 bg-primary-container rounded-t-sm" />
               <div className="w-1.5 h-5 bg-secondary rounded-t-sm" />

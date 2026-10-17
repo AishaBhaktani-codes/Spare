@@ -223,9 +223,9 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-on-surface-variant text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => router.push("/upload")}>
+          <div className="flex items-center gap-2 text-on-surface-variant text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => router.push("/student-verification")}>
             <span className="material-symbols-outlined text-xs">arrow_back</span>
-            <span>Back to Upload</span>
+            <span>Back to Student Verification</span>
           </div>
           <h1 className="text-4xl font-extrabold text-primary-container tracking-tight">
             Skill Gap Report / {dummyUser.targetRole}
@@ -249,9 +249,9 @@ export default function DashboardPage() {
               </button>
             </>
           )}
-          <button onClick={() => router.push("/upload")} className="px-6 py-3 rounded-xl border border-outline-variant hover:bg-surface-container-high transition-all text-sm font-semibold flex items-center gap-2 hidden md:flex">
+          <button onClick={() => router.push("/student-verification")} className="px-6 py-3 rounded-xl border border-outline-variant hover:bg-surface-container-high transition-all text-sm font-semibold flex items-center gap-2 hidden md:flex">
             <span className="material-symbols-outlined text-sm">refresh</span>
-            Re-upload
+            New Verification
           </button>
           <button onClick={() => router.push("/roadmap")} className="px-8 py-3 rounded-xl pulse-gradient text-white font-bold text-sm shadow-[0_0_15px_rgba(124,58,237,0.4)] hover:scale-105 transition-all flex items-center gap-2">
             Roadmap
@@ -446,9 +446,9 @@ export default function DashboardPage() {
 
       {/* Bottom Navigation */}
       <div className="mt-16 flex justify-between items-center text-on-surface-variant font-medium pt-8 border-t border-surface-container">
-        <button onClick={() => router.push("/upload")} className="flex items-center gap-2 hover:text-primary transition-colors">
+        <button onClick={() => router.push("/student-verification")} className="flex items-center gap-2 hover:text-primary transition-colors">
           <span className="material-symbols-outlined">west</span>
-          Previous: Upload Analysis
+          Previous: Student Verification
         </button>
         <button onClick={() => router.push("/roadmap")} className="flex items-center gap-2 hover:text-primary transition-colors">
           Next: Learning Roadmap
