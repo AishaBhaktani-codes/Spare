@@ -8,6 +8,7 @@ import { PlannerService } from "./services/planner.service";
 import { CriticService } from "./services/critic.service";
 import { ReasoningTracer } from "./utils/reasoning-tracer";
 import { YouTubeService } from "./services/youtube.service";
+import { StudentService } from "./services/student.service";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ const diagnoser = new DiagnoserService();
 const planner = new PlannerService();
 const critic = new CriticService();
 const youtube = new YouTubeService();
+const studentService = new StudentService();
 
 // --- Global SSE connections ---
 const sseClients = new Map<string, (data: string) => void>();
@@ -347,6 +349,77 @@ async function main() {
                 message: error.message,
                 reasoningTrace: tracer.getSteps(),
             });
+        }
+    });
+
+    // ============================================================
+    // STUDENT ENDPOINTS (all responses generated dynamically)
+    // ============================================================
+
+    // Next level of "what are you pursuing" options, based on the path chosen so far
+    server.post("/api/student/pursuit-options", async (request, reply) => {
+        try {
+            const { path } = (request.body || {}) as { path?: string[] };
+            const result = await studentService.getPursuitOptions(Array.isArray(path) ? path : []);
+            return reply.send(result);
+        } catch (error: any) {
+            return reply.status(500).send({ error: error.message || "Failed to load options" });
+        }
+    });
+
+    // Skills required for the selected pursuit path + field of interest
+    server.post("/api/student/skills", async (request, reply) => {
+        try {
+            const { path, fieldOfInterest } = (request.body || {}) as { path?: string[]; fieldOfInterest?: string };
+            if (!Array.isArray(path) || path.length === 0) {
+                return reply.status(400).send({ error: "Select what you are pursuing first" });
+            }
+            if (!fieldOfInterest || !fieldOfInterest.trim()) {
+                return reply.status(400).send({ error: "Field of interest is required" });
+            }
+            const skills = await studentService.getRequiredSkills(path, fieldOfInterest.trim());
+            return reply.send({ skills });
+        } catch (error: any) {
+            return reply.status(500).send({ error: error.message || "Failed to load skills" });
+        }
+    });
+
+    // Marksheet (PDF) + pursuit path + field of interest + self-ratings -> analysis
+    server.post("/api/student/analyze", async (request, reply) => {
+        try {
+            let marksheetBuffer: Buffer | null = null;
+            let marksheetFilename = "marksheet.pdf";
+            let pursuitPath: string[] = [];
+            let fieldOfInterest = "";
+            let ratings: Array<{ skill: string; rating: number }> = [];
+
+            for await (const part of request.parts()) {
+                if (part.type === "file" && part.fieldname === "marksheet") {
+                    marksheetBuffer = await part.toBuffer();
+                    marksheetFilename = part.filename || marksheetFilename;
+                } else if (part.type === "field") {
+                    const value = String(part.value ?? "");
+                    if (part.fieldname === "pursuitPath") pursuitPath = JSON.parse(value);
+                    else if (part.fieldname === "fieldOfInterest") fieldOfInterest = value.trim();
+                    else if (part.fieldname === "ratings") ratings = JSON.parse(value);
+                }
+            }
+
+            if (!marksheetBuffer) return reply.status(400).send({ error: "Marksheet PDF is required" });
+            if (!pursuitPath.length) return reply.status(400).send({ error: "Select what you are pursuing" });
+            if (!fieldOfInterest) return reply.status(400).send({ error: "Field of interest is required" });
+            if (!ratings.length) return reply.status(400).send({ error: "Rate your skills before analyzing" });
+
+            const result = await studentService.analyze({
+                marksheetBuffer,
+                marksheetFilename,
+                pursuitPath,
+                fieldOfInterest,
+                ratings,
+            });
+            return reply.send(result);
+        } catch (error: any) {
+            return reply.status(500).send({ error: error.message || "Analysis failed" });
         }
     });
 
