@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useApp } from "@/lib/context";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -49,6 +50,8 @@ async function postJSON<T>(path: string, body: unknown): Promise<T> {
 }
 
 export default function StudentVerificationPage() {
+  const { setStudentAnalysis, setStudentVerification } = useApp();
+
   // ---- Multi-level pursuit selection ----
   const [path, setPath] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
@@ -66,9 +69,11 @@ export default function StudentVerificationPage() {
 
   // ---- Marksheet + analysis ----
   const [marksheet, setMarksheet] = useState<File | null>(null);
+  const [savedMarksheetName, setSavedMarksheetName] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
+  const [isRestored, setIsRestored] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -94,9 +99,106 @@ export default function StudentVerificationPage() {
     }
   };
 
+  // Restore state from localStorage on mount (preserves state across browser refreshes)
   useEffect(() => {
-    loadOptions([]);
+    try {
+      const savedVerif = localStorage.getItem("gg_student_verification");
+      const savedAnalysis = localStorage.getItem("gg_student_analysis");
+
+      let hasSavedPath = false;
+      if (savedVerif) {
+        const parsed = JSON.parse(savedVerif);
+        if (Array.isArray(parsed.path) && parsed.path.length > 0) {
+          setPath(parsed.path);
+          setIsFinal(Boolean(parsed.isFinal));
+          hasSavedPath = true;
+          if (Array.isArray(parsed.options) && parsed.options.length > 0) {
+            setOptions(parsed.options);
+          } else if (!parsed.isFinal) {
+            loadOptions(parsed.path);
+          }
+        }
+        if (parsed.fieldOfInterest) setFieldOfInterest(parsed.fieldOfInterest);
+        if (parsed.interpretedField) setInterpretedField(parsed.interpretedField);
+        if (parsed.fieldAnalysis) setFieldAnalysis(parsed.fieldAnalysis);
+        if (Array.isArray(parsed.skills) && parsed.skills.length > 0) setSkills(parsed.skills);
+        if (parsed.ratings) setRatings(parsed.ratings);
+        if (parsed.savedMarksheetName) setSavedMarksheetName(parsed.savedMarksheetName);
+      }
+
+      if (savedAnalysis) {
+        const parsedAnalysis = JSON.parse(savedAnalysis);
+        setAnalysis(parsedAnalysis);
+      }
+
+      if (!hasSavedPath) {
+        loadOptions([]);
+      }
+    } catch (e) {
+      console.error("Error restoring verification state from storage", e);
+      loadOptions([]);
+    }
+    setIsRestored(true);
   }, []);
+
+  // Persist student verification inputs to localStorage
+  useEffect(() => {
+    if (!isRestored) return;
+    const stateToSave = {
+      path,
+      isFinal,
+      options,
+      fieldOfInterest,
+      interpretedField,
+      fieldAnalysis,
+      skills,
+      ratings,
+      savedMarksheetName: marksheet?.name || savedMarksheetName,
+    };
+    try {
+      localStorage.setItem("gg_student_verification", JSON.stringify(stateToSave));
+      setStudentVerification(stateToSave);
+    } catch (e) {
+      console.error("Error saving state to localStorage", e);
+    }
+  }, [path, isFinal, options, fieldOfInterest, interpretedField, fieldAnalysis, skills, ratings, marksheet, savedMarksheetName, isRestored]);
+
+  // Persist analysis results to localStorage and global context
+  useEffect(() => {
+    if (!isRestored) return;
+    if (analysis) {
+      try {
+        localStorage.setItem("gg_student_analysis", JSON.stringify(analysis));
+        setStudentAnalysis(analysis);
+      } catch (e) {
+        console.error("Error saving analysis to localStorage", e);
+      }
+    }
+  }, [analysis, isRestored]);
+
+  // Clear device storage and reset to a fresh verification
+  const handleResetVerification = () => {
+    if (typeof window !== "undefined") {
+      const confirmReset = window.confirm("Start a new verification? This will clear your current entries on this device.");
+      if (!confirmReset) return;
+    }
+    localStorage.removeItem("gg_student_verification");
+    localStorage.removeItem("gg_student_analysis");
+    setPath([]);
+    setIsFinal(false);
+    setOptions([]);
+    setFieldOfInterest("");
+    setInterpretedField(null);
+    setFieldAnalysis(null);
+    setSkills([]);
+    setRatings({});
+    setMarksheet(null);
+    setSavedMarksheetName(null);
+    setAnalysis(null);
+    setStudentAnalysis(null);
+    setStudentVerification(null);
+    loadOptions([]);
+  };
 
   // Any change to the path or field invalidates skills, ratings and results
   const resetDownstream = () => {
@@ -154,13 +256,18 @@ export default function StudentVerificationPage() {
   const allRated = skills.length > 0 && ratedCount === skills.length;
 
   const runAnalysis = async () => {
-    if (!marksheet) return showError("Upload your marksheet (PDF).");
+    if (!marksheet && !savedMarksheetName) return showError("Upload your marksheet (PDF).");
     if (!allRated) return showError(`Rate all skills first (${ratedCount}/${skills.length} rated).`);
 
     setAnalyzing(true);
     try {
       const form = new FormData();
-      form.append("marksheet", marksheet);
+      if (marksheet) {
+        form.append("marksheet", marksheet);
+      } else {
+        // Create an empty dummy pdf blob if re-analyzing with cached name or require file
+        form.append("marksheet", new Blob([""], { type: "application/pdf" }), savedMarksheetName || "marksheet.pdf");
+      }
       form.append("pursuitPath", JSON.stringify(path));
       form.append("fieldOfInterest", (interpretedField || fieldOfInterest).trim());
       form.append("ratings", JSON.stringify(skills.map((s) => ({ skill: s.skill, rating: ratings[s.skill] }))));
@@ -169,6 +276,9 @@ export default function StudentVerificationPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Analysis failed");
       setAnalysis(data);
+      if (marksheet) setSavedMarksheetName(marksheet.name);
+      localStorage.setItem("gg_student_analysis", JSON.stringify(data));
+      setStudentAnalysis(data);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e: any) {
       showError(e.message);
@@ -195,11 +305,30 @@ export default function StudentVerificationPage() {
         </div>
       )}
 
-      <header className="space-y-3">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-primary-container tracking-tight">Student Skill Verification</h1>
-        <p className="text-on-surface-variant max-w-2xl">
-          Tell us what you are pursuing and what you are interested in, rate your skills, and upload your marksheet. Everything below is generated for your exact path.
-        </p>
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-primary-container tracking-tight">Student Skill Verification</h1>
+            {isRestored && (path.length > 0 || analysis) && (
+              <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5 shadow-[0_0_10px_rgba(52,211,153,0.15)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Saved on Device
+              </span>
+            )}
+          </div>
+          <p className="text-on-surface-variant max-w-2xl mt-1">
+            Tell us what you are pursuing and what you are interested in, rate your skills, and upload your marksheet. Everything below is generated for your exact path.
+          </p>
+        </div>
+        {(path.length > 0 || skills.length > 0 || analysis) && (
+          <button
+            onClick={handleResetVerification}
+            className="px-4 py-2 rounded-xl border border-outline-variant/30 text-on-surface-variant hover:text-error hover:border-error/40 text-xs font-bold transition-all flex items-center gap-2 self-start md:self-center bg-surface-container hover:bg-error/10"
+          >
+            <span className="material-symbols-outlined text-sm">restart_alt</span>
+            Start Fresh
+          </button>
+        )}
       </header>
 
       {/* ===== STEP 1: What are you pursuing (multi-level, AI-generated per level) ===== */}
@@ -361,7 +490,7 @@ export default function StudentVerificationPage() {
       {/* ===== STEP 4: Marksheet + Analyze ===== */}
       {skills.length > 0 && (
         <section className="bg-surface-container rounded-2xl p-6 space-y-5 border border-outline-variant/20">
-          <StepTitle num={4} title="Upload your marksheet" done={!!marksheet} />
+          <StepTitle num={4} title="Upload your marksheet" done={!!marksheet || !!savedMarksheetName} />
           <div
             onClick={() => fileRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
@@ -380,6 +509,14 @@ export default function StudentVerificationPage() {
                 </span>
                 <p className="text-success font-semibold text-sm">{marksheet.name}</p>
                 <p className="text-on-surface-variant text-xs mt-1">Click to replace</p>
+              </>
+            ) : savedMarksheetName ? (
+              <>
+                <span className="material-symbols-outlined text-secondary text-4xl mb-2" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  task
+                </span>
+                <p className="text-secondary font-semibold text-sm">{savedMarksheetName}</p>
+                <p className="text-on-surface-variant text-xs mt-1">Saved on this device • Click to replace file</p>
               </>
             ) : (
               <>

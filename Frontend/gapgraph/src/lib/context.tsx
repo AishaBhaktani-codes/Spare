@@ -16,6 +16,10 @@ interface AppContextType {
   logout: () => void;
   analysisResult: any;
   setAnalysisResult: (result: any) => void;
+  studentAnalysis: any;
+  setStudentAnalysis: (result: any) => void;
+  studentVerification: any;
+  setStudentVerification: (data: any) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -27,6 +31,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userProfile, setUserProfile] = useState<{ name: string; email: string; role: string; id?: string } | null>(null);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [studentAnalysis, setStudentAnalysis] = useState<any>(null);
+  const [studentVerification, setStudentVerification] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load state from localStorage on mount
@@ -40,6 +46,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const storedAnalysis = localStorage.getItem("gg_analysisResult");
       if (storedAnalysis) setAnalysisResult(JSON.parse(storedAnalysis));
+
+      const storedStudentAnalysis = localStorage.getItem("gg_student_analysis");
+      if (storedStudentAnalysis) setStudentAnalysis(JSON.parse(storedStudentAnalysis));
+
+      const storedStudentVerif = localStorage.getItem("gg_student_verification");
+      if (storedStudentVerif) setStudentVerification(JSON.parse(storedStudentVerif));
 
       const storedModules = localStorage.getItem("gg_completedModules");
       if (storedModules) setCompletedModules(new Set(JSON.parse(storedModules)));
@@ -71,6 +83,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isInitialized) return;
+    if (studentAnalysis) {
+      localStorage.setItem("gg_student_analysis", JSON.stringify(studentAnalysis));
+    } else {
+      localStorage.removeItem("gg_student_analysis");
+    }
+  }, [studentAnalysis, isInitialized]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    if (studentVerification) {
+      localStorage.setItem("gg_student_verification", JSON.stringify(studentVerification));
+    } else {
+      localStorage.removeItem("gg_student_verification");
+    }
+  }, [studentVerification, isInitialized]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
     localStorage.setItem("gg_completedModules", JSON.stringify(Array.from(completedModules)));
   }, [completedModules, isInitialized]);
 
@@ -98,6 +128,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUserProfile(null);
     setCompletedModules(new Set());
     setAnalysisResult(null);
+    setStudentAnalysis(null);
+    setStudentVerification(null);
+    localStorage.removeItem("gg_student_analysis");
+    localStorage.removeItem("gg_student_verification");
   };
 
   return (
@@ -116,6 +150,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         logout,
         analysisResult,
         setAnalysisResult,
+        studentAnalysis,
+        setStudentAnalysis,
+        studentVerification,
+        setStudentVerification,
       }}
     >
       {children}

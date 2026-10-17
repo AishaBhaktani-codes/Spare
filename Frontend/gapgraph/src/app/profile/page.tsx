@@ -9,7 +9,7 @@ import { useRef } from "react";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { isLoggedIn, logout, selectedRole, setSelectedRole, userProfile, uploadedFiles, analysisResult } = useApp();
+  const { isLoggedIn, logout, selectedRole, setSelectedRole, userProfile, uploadedFiles, analysisResult, studentAnalysis, studentVerification } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
@@ -103,28 +103,30 @@ export default function ProfilePage() {
           </div>
 
           <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10">
-            <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Uploaded Assets</h3>
+            <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Academic & Career Records</h3>
             <div className="space-y-3">
-              {(uploadedFiles?.resume || analysisResult) ? (
+              {(studentAnalysis?.marksheet?.filename || studentVerification?.savedMarksheetName) ? (
                  <div className="flex items-center gap-3 p-3 bg-surface-container-highest rounded-xl">
                    <span className="material-symbols-outlined text-success">task</span>
                    <div className="flex-1 min-w-0">
-                     <p className="text-sm font-bold text-on-surface truncate">{uploadedFiles?.resume?.name || analysisResult?.resumeFilename || "Resume.pdf"}</p>
-                     <p className="text-[10px] text-on-surface-variant uppercase">Analyzed Successfully</p>
+                     <p className="text-sm font-bold text-on-surface truncate">{studentAnalysis?.marksheet?.filename || studentVerification?.savedMarksheetName}</p>
+                     <p className="text-[10px] text-emerald-400 uppercase font-semibold">Verified Marksheet</p>
                    </div>
                  </div>
               ) : null}
-              {uploadedFiles?.jd ? (
+              {(studentAnalysis?.pursuitPath || studentVerification?.path) ? (
                  <div className="flex items-center gap-3 p-3 bg-surface-container-highest rounded-xl">
-                   <span className="material-symbols-outlined text-secondary">description</span>
+                   <span className="material-symbols-outlined text-secondary">school</span>
                    <div className="flex-1 min-w-0">
-                     <p className="text-sm font-bold text-on-surface truncate">{uploadedFiles.jd.name}</p>
-                     <p className="text-[10px] text-on-surface-variant uppercase">Target benchmark</p>
+                     <p className="text-sm font-bold text-on-surface truncate">
+                       {(studentAnalysis?.pursuitPath || studentVerification?.path).slice(-1)[0]}
+                     </p>
+                     <p className="text-[10px] text-on-surface-variant uppercase">Current Pursuit</p>
                    </div>
                  </div>
               ) : null}
-              {!(uploadedFiles?.resume || uploadedFiles?.jd || analysisResult) && (
-                <p className="text-xs text-on-surface-variant">No documents uploaded yet.</p>
+              {!(studentAnalysis || studentVerification || uploadedFiles?.resume || analysisResult) && (
+                <p className="text-xs text-on-surface-variant">No verification data on this device yet.</p>
               )}
             </div>
           </div>
@@ -217,6 +219,116 @@ export default function ProfilePage() {
               </div>
             )}
           </form>
+        </div>
+
+        {/* Student Verification & Improvements Section */}
+        <div className="col-span-1 md:col-span-3 bg-surface-container rounded-2xl p-8 relative overflow-hidden border border-outline-variant/20">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-outline-variant/15">
+            <div>
+              <h3 className="text-xl font-bold text-primary-container flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary">verified</span>
+                Verified Academic Pathway & Skill Improvements
+              </h3>
+              <p className="text-xs text-on-surface-variant mt-1">
+                Saved on this device: Track your academic performance and prioritized skill bridging.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push("/student-verification")}
+              className="px-5 py-2.5 rounded-xl pulse-gradient text-on-primary-container font-bold text-xs flex items-center gap-2 hover:scale-105 transition-all shadow-[0_0_15px_rgba(124,58,237,0.3)]"
+            >
+              <span className="material-symbols-outlined text-sm">open_in_new</span>
+              {studentAnalysis ? "Review Full Verification" : "Start Verification"}
+            </button>
+          </div>
+
+          {studentAnalysis ? (
+            <div className="space-y-6">
+              {/* Summary Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">Marksheet Aggregate</p>
+                  <p className="text-2xl font-black text-secondary mt-1">{studentAnalysis.marksheet?.percentage ?? "N/A"}%</p>
+                </div>
+                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">Average Expertise</p>
+                  <p className="text-2xl font-black text-cyan-400 mt-1">{studentAnalysis.averageRating}/10</p>
+                </div>
+                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">Strengths</p>
+                  <p className="text-2xl font-black text-emerald-400 mt-1">{studentAnalysis.strengths?.length || 0}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">Critical Gaps</p>
+                  <p className="text-2xl font-black text-red-400 mt-1">
+                    {studentAnalysis.gaps?.filter((g: any) => g.priority === "critical").length || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Pathway details */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-2">
+                <p className="text-xs text-on-surface-variant uppercase font-bold tracking-wider">Pursuing Pathway</p>
+                <div className="text-sm font-semibold text-on-surface flex items-center gap-2 flex-wrap">
+                  {studentAnalysis.pursuitPath?.map((p: string, i: number) => (
+                    <span key={i} className="flex items-center gap-2">
+                      {i > 0 && <span className="material-symbols-outlined text-xs text-outline">chevron_right</span>}
+                      <span className="px-2.5 py-1 rounded-lg bg-primary-container/20 text-primary text-xs font-semibold">{p}</span>
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-on-surface-variant mt-2">
+                  <span className="font-semibold text-secondary">Verified Discipline:</span>{" "}
+                  {studentAnalysis.interpretedField || studentAnalysis.fieldOfInterest}
+                </p>
+              </div>
+
+              {/* Priority Skill Improvements */}
+              {studentAnalysis.gaps?.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-on-surface uppercase tracking-wider">Targeted Skill Improvements</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {studentAnalysis.gaps.slice(0, 4).map((g: any, i: number) => (
+                      <div key={i} className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-on-surface">{g.skill}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${g.priority === "critical" ? "bg-red-500/10 text-red-400 border border-red-500/30" : "bg-amber-500/10 text-amber-400 border border-amber-500/30"}`}>
+                            {g.priority}
+                          </span>
+                        </div>
+                        <p className="text-xs text-on-surface-variant line-clamp-2">{g.reason}</p>
+                        <p className="text-xs text-cyan-400 font-semibold">{g.nextStep}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : studentVerification?.path?.length ? (
+            <div className="p-6 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-3">
+              <p className="text-sm text-on-surface font-semibold">Active verification in progress on this device:</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {studentVerification.path.map((p: string, i: number) => (
+                  <span key={i} className="px-2.5 py-1 rounded-lg bg-primary-container/20 text-primary text-xs font-semibold">{p}</span>
+                ))}
+              </div>
+              {studentVerification.fieldOfInterest && (
+                <p className="text-xs text-on-surface-variant">Field: <span className="font-semibold text-secondary">{studentVerification.interpretedField || studentVerification.fieldOfInterest}</span></p>
+              )}
+              <p className="text-xs text-on-surface-variant">{Object.keys(studentVerification.ratings || {}).length} skills rated so far.</p>
+            </div>
+          ) : (
+            <div className="p-8 text-center rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-3">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant">school</span>
+              <p className="text-sm text-on-surface-variant">No student verification recorded on this device yet.</p>
+              <button
+                onClick={() => router.push("/student-verification")}
+                className="px-6 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all inline-block"
+              >
+                Start Your Verification
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
